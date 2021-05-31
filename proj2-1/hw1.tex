@@ -1,0 +1,295 @@
+\documentclass[10pt,letterpaper,notitlepage]{report}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{bbold}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{tipa}
+\usepackage{physics}
+\usepackage{subcaption}
+\usepackage{cancel}
+\setlength{\parindent}{0pt}
+\usepackage[left=2cm,right=2cm,top=2cm,bottom=2cm]{geometry}
+\title{Project 2.1: Ideal MHD Analyses and Prototype Code Development}
+\author{EVAN BLUHM \\ AA545}
+\date{}
+
+\begin{document}
+\maketitle
+
+\subsection*{Conservative Form of Ideal MHD Equations}
+
+\emph{Starting from the non-conservative ideal MHD plasma model presented in class, derive the conservative form of the ideal MHD equation.}
+
+\vspace{10pt}
+
+The non-conservative continuity equation is:
+\begin{equation}
+\pdv{\rho}{t} + \vec v \cdot \grad \rho = - \rho \div \vec v
+\end{equation}
+Application of the product rule $\div (a \vec b) = a \div \vec b + (\grad a) \cdot \vec b$ gives
+\begin{eqnarray}
+0 & = & \pdv{\rho}{t} + \vec v \cdot \grad \rho + \rho \div \vec v \\
+& = & \pdv{\rho}{t} + \div (\rho \vec v)
+\end{eqnarray}
+Moving on to the non-conservative form of the momentum equation, we have
+\begin{equation}
+0 = \rho \left( \pdv{\vec v}{t} + \vec v \cdot \grad v \right) + \grad P - \vec j \cross \vec B
+\end{equation}
+Expanding the first term and using the conservation form of the continuity equation,
+\begin{eqnarray}
+\rho \pdv{\vec v}{t} & = & \pdv{(\rho \vec v)}{t} - \vec v \pdv{\rho}{t} \\
+& = & \pdv{(\rho \vec v)}{t} + \vec v \left( \div (\rho \vec v) \right)
+\end{eqnarray}
+Substituting back into the momentum equation,
+\begin{eqnarray}
+0 & = & \pdv{(\rho \vec v)}{t} + \vec v \div (\rho \vec v) + \rho \vec v \cdot \grad v + \grad P - \vec j \cross \vec B \\
+& = & \pdv{(\rho \vec v)}{t} + \div (\rho \vec v \vec v) + \grad P - \vec j \cross \vec B
+\end{eqnarray}
+Using Ampere's law to expand $\vec j$,
+\begin{eqnarray}
+\vec j \cross \vec B & = & \frac{1}{\mu_0} (\curl \vec B) \cross \vec B \\
+& = & \frac{1}{\mu_0} (\vec B \cdot \grad) \vec B -  \grad \frac{B^2}{2 \mu_0} \\
+& = & \frac{1}{\mu_0} \div (\vec B \vec B) - \vec B (\div \vec B) - \grad \frac{B^2}{2 \mu_0} \\
+& = & \frac{1}{\mu_0} \div (\vec B \vec B) - \grad \frac{B^2}{2 \mu_0} \qquad (\div \vec B = 0)
+\end{eqnarray}
+Finally, we can put the momentum equation into conservative form
+\begin{eqnarray}
+0 & = & \pdv{(\rho \vec v)}{t} + \div (\rho \vec v \vec v) + \grad P - \left[\frac{1}{\mu_0} \div (\vec B \vec B) - \grad \frac{B^2}{2 \mu_0} \right] \\
+& = & \pdv{(\rho \vec v)}{t} + \div (\rho \vec v \vec v) + \div \frac{\vec B \vec B}{\mu_0} + \grad \left( P + \frac{B^2}{2 \mu_0} \right) \\
+& = & \pdv{(\rho \vec v)}{t} + \div \left[ \rho \vec v \vec v - \frac{\vec B \vec B}{\mu_0} + \left( P + \frac{B^2}{2\mu_0} \right) \mathbb{1} \right]
+\end{eqnarray}
+For ideal MHD, we treat the fluid as a perfect conductor, so that
+\begin{equation}
+\vec E = - \vec v \cross \vec B
+\end{equation}
+Faraday's law gives
+\begin{eqnarray}
+\pdv{\vec B}{t} & = &  - \curl \vec E\\
+& = & \curl (\vec v \cross \vec B) \\
+& = & \div ( \vec B \vec v - \vec v \vec B)
+\end{eqnarray}
+So we have a conservation equation for the magnetic flux:
+\begin{equation}
+\pdv{\vec B}{t} + \div (\vec v \vec B - \vec B \vec v) = 0
+\end{equation}
+
+Finally, we need a conservation law for the energy density
+\begin{equation}
+e = \frac{P}{\gamma - 1} \frac{\rho v^2}{2} + \frac{B^2}{2 \mu_0}
+\end{equation}
+
+First, 
+
+
+TODO: MHD EQUATION FOR CONSERVATION OF ENERGY
+
+\subsection*{Equation Type of 1D Ideal MHD}
+
+The conservation form of the ideal MHD equations can be expressed as a matrix equation:
+\begin{equation}
+\pdv{\vec Q}{t} + \div \vec{T} = 0
+\end{equation}
+where
+\begin{equation}
+\vec Q = \begin{bmatrix}
+\rho \\
+\rho v_x \\
+\rho v_y \\
+\rho v_z \\
+B_x \\
+B_y \\
+B_z \\
+e
+\end{bmatrix}
+\end{equation}
+and
+\begin{equation}
+\vec T = \begin{bmatrix}
+\rho v_x & \rho v_y & \rho v_z \\
+\rho v_x^2 + p + \frac{B^2}{2 \mu_0} - \frac{B_x ^2}{\mu_0} & \rho v_x v_y - \frac{B_x B_y}{\mu_0} & \rho v_x v_z - \frac{B_x B_z}{\mu_0} \\
+\rho v_y v_x - \frac{B_y B_x}{\mu_0} & \rho v_y ^2 + p + \frac{B^2}{2 \mu_0} - \frac{B_y ^2}{\mu_0} & \rho v_y v_z - \frac{B_y B_z}{\mu_0} \\
+\rho v_z v_x - \frac{B_x B_z}{\mu_0} & \rho v_z v_y - \frac{B_z B_y}{\mu_0} & \rho v_z ^2 + p + \frac{B^2}{2 \mu_0} - \frac{B_z ^2}{\mu_0} \\
+0 & B_x v_y - v_x B_y & B_x v_z - v_x B_z  \\
+B_y v_x - v_y B_x  & 0 & B_y v_z - v_y B_z  \\
+B_z v_x - v_z B_x & B_z v_y - v_z B_y & 0 \\
+\left( e + P + \frac{B^2}{2 \mu_0} \right) v_x - \frac{\vec B \cdot \vec v}{\mu_0} B_x & \left( e + P + \frac{B^2}{2 \mu_0} \right) v_y - \frac{\vec B \cdot \vec v}{\mu_0} B_y & \left( e + P + \frac{B^2}{2 \mu_0} \right) v_z - \frac{\vec B \cdot \vec v}{\mu_0} B_z
+\end{bmatrix} ^ \top
+\end{equation}
+
+To determine whether the ideal MHD system of equations is elliptic, parabolic, or hyperbolic, we need to determine the eigenvalues of the flux Jacobian $\pdv{\vec T}{\vec Q}$. For the 1D ideal MHD equations, we'll just consider fluxes in the $x$ direction. Let $\vec T = \vec F \vu x + \vec G \vu y + \vec H \vu y$, so
+
+\begin{equation}
+\vec F = \begin{bmatrix}
+\rho v_x \\
+\rho v_x^2 + p + \frac{B^2}{2 \mu_0} - \frac{B_x ^2}{\mu_0} \\
+\rho v_y v_x - \frac{B_y B_x}{\mu_0} \\
+\rho v_z v_x - \frac{B_x B_z}{\mu_0} \\
+0 \\
+B_y v_x - v_y B_x \\
+B_z v_x - v_z B_x \\
+\left( e + P + \frac{B^2}{2 \mu_0} \right) v_x - \frac{\vec B \cdot \vec v}{\mu_0} B_x
+\end{bmatrix}
+\end{equation}
+
+The flux Jacobian of $\vec F$ is
+\begin{eqnarray}
+\pdv{\vec F}{\vec Q} & = & \begin{bmatrix} \left. \pdv{F_1}{Q_1} \right|_{Q_2 Q_3 Q_4} & \left. \pdv{F_1}{Q_2} \right|_{Q_1 Q_3 Q_4} & \left. \pdv{F_1}{Q_3} \right|_{Q_1 Q_2 Q_4} & \ldots\\
+\left. \pdv{F_2}{Q_1} \right|_{Q_2 Q_3 Q_4} & \ldots & \ldots & \ldots \\
+\ldots & \ldots & \ldots & \ldots 
+\end{bmatrix} \\
+& = & \begin{bmatrix}
+0  &  1  &  0  &  0  &  0  &  0  &  0  &  0 \\
+p_\rho - v_x ^2 & 2 v_x + p_{(\rho v_x)}  & p_{(\rho v_y)} & p_{(\rho v_z)} & p_{(B_x)} - \frac{B_x}{\mu_0}  & p_{(B_y)} & p_{(B_z)} & p_e \\
+-v_x v_y & v_y & v_x & 0 & - \frac{B_y}{\mu_0} & - \frac{B_x}{\mu_0} & 0 & 0 \\
+-v_x v_z & v_z & 0 & v_x & - \frac{B_z}{\mu_0} & 0 & - \frac{B_x}{\mu_0} & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+\frac{v_x B_y - v_y B_x}{\rho} & - \frac{B_y}{\rho} & \frac{B_x}{\rho} & 0 & v_y & - v_x & 0 & 0 \\
+\frac{v_x B_z - v_z B_x}{\rho} & - \frac{B_z}{\rho} & 0 & \frac{B_x}{\rho} & v_z & 0 & -v_x & 0 \\
+\pdv{\vec F_8}{\vec Q_1} & \pdv{\vec F_8}{\vec Q_2} & \pdv{\vec F_8}{\vec Q_3} & \pdv{\vec F_8}{\vec Q_4} & \pdv{\vec F_8}{\vec Q_5} & \pdv{\vec F_8}{\vec Q_6} & \pdv{\vec F_8}{\vec Q_7} & \pdv{\vec F_8}{\vec Q_8} 
+\end{bmatrix}
+\end{eqnarray}
+where 
+\begin{equation}
+\pdv{\vec F_8}{\vec Q} = 
+\begin{bmatrix}
+v_x \left(p_\rho - e - p - \frac{B^2}{2 \mu_0}\right) - \frac{\vec B \cdot \vec v B_x}{\mu_0 \rho} \\
+e + p + \frac{B^2}{2 \mu_0} + v_x ^2 (1 - \gamma) + \frac{B_x ^2}{\mu_0 \rho} \\
+v_x v_y (1 - \gamma) + \frac{B_x B_z}{\mu_0 \rho} \\
+v_x v_z (1 - \gamma) + \frac{B_x B_z}{\mu_0 \rho} \\
+\frac{1}{\mu_0} v_x B_z (\gamma - 1) - \frac{\vec v \cdot \vec B}{\mu_0} \\
+\frac{v_x B_y \gamma - v_y B_x}{\mu_0} \\
+\frac{v_x B_z \gamma - v_z B_x}{\mu_0} \\
+\gamma v_x
+\end{bmatrix}^\top
+\end{equation}
+and $p_q$ is the derivative of pressure with respect to conserved variable $q$:
+\begin{equation}
+p = (\gamma - 1) \left(e - \frac{\rho v^2}{2} - \frac{B^2}{2 \mu_0} \right) \\
+= (\gamma - 1) \left[ e - \frac{1}{2} \left( \frac{(\rho v_x)^2 + (\rho v_y)^2 + (\rho v_z)^2}{\rho} + \frac{B_x ^2 + B_y ^2 + B_z ^2}{\mu_0} \right) \right]
+\end{equation}
+
+Diagonalizing $\pdv{\vec F}{\vec Q}$ to find its eigenvalues is quite a task. Luckily, there is a simpler way to find its eigenvalues, without performing a decomposition. Our 1D MHD system of equations reads:
+\begin{equation}
+\pdv{\vec Q}{t} + \pdv{\vec F(\vec U)}{\vec Q} \pdv{\vec U}{x} = 0
+\end{equation}
+where $\vec Q$ is the vector of conserved quantities. Let's consider a change of variables from the conserved quantities $\vec Q$ to a set of primitive quantities $\vec V = [\rho, v_x, v_y, v_z, B_x, B_y, B_z, p]^\top$:
+\begin{equation}
+\pdv{\vec V}{t} + \pdv{ \vec F(\vec V)}{V} \pdv{V}{x} = 0
+\end{equation}
+For this set of primitive variables, we can construct a transformation matrix $\vec T_{QV}$, such that
+\begin{equation}
+\dd \vec U = \vec T_{QV} \vec V
+\end{equation}
+where
+\begin{equation}
+\vec T_{QV} = \begin{bmatrix}
+1 & 0 & 0 & 0 & 0 & 0 & 0 & 0 \\
+v_x & \rho & 0 & 0 & 0 & 0 & 0 & 0\\
+v_y & 0 & \rho & 0 & 0 & 0 & 0 & 0\\
+v_z & 0 & 0 & \rho & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 1 & 0 & 0 & 0\\
+0 & 0 & 0 & 0 & 0 & 1 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 & 0 & 1 & 0\\
+\frac{1}{2} v^2 & \rho v_x & \rho v_y & \rho v_z & \frac{1}{\gamma - 1} & \frac{B_x}{\mu_0} & \frac{B_y}{\mu_0} & \frac{B_z}{\mu_0}
+\end{bmatrix}
+\end{equation}
+This matrix is invertible, so there is a similarity relation between $\pdv{\vec F( \vec U)}{\vec U}$ and $\pdv{\vec F(\vec V)}{\vec V}$:
+\begin{equation}
+\pdv{\vec F(\vec V)}{\vec V} = \vec T_{UV} ^{-1} \pdv{ \vec F(\vec U)}{\vec U} \vec T_{UV}
+\end{equation}
+This means that $\pdv{\vec F( \vec U)}{\vec U}$ and $\pdv{\vec F(\vec V)}{\vec V}$ have identical eigenvalues, and related eigenvectors. Let's reformulate our system of equations to construct $\vec F(\vec V)$. The continuity equation is fine as-is. 
+\begin{equation}
+\pdv{\rho}{t} + \div (\rho \vec v) = 0
+\end{equation}
+We can write the momentum equation as:
+\begin{equation}
+\pdv{\vec v}{t} + (\vec v \cdot \grad) \vec v + \frac{1}{\rho} p - \frac{1}{\rho \mu_0} (\curl \vec B) \cross \vec B = 0
+\end{equation}
+and we can leave the induction and energy equations as they are:
+\begin{equation}
+\pdv{\vec B}{t} + \div \left( \vec v \vec B - \vec B \vec v \right) = 0
+\end{equation}
+\begin{equation}
+\pdv{p}{t} + \vec v \cdot \grad p + \gamma p \div \vec v = 0
+\end{equation}
+
+Writing these out for 1D MHD using Einstein notation, to make the form of $\pdv{\vec F(\vec V)}{\vec V}$ clear, we have
+\begin{eqnarray*}
+\partial _t \rho + v_x \partial_x \rho + \rho \partial_x v_x = 0 \\
+\partial_t v_x + v_x \partial _x v_x + \frac{1}{\rho} \partial_x p + \frac{B_y}{\rho \mu_0} \partial_x B_y + \frac{B_z}{\rho \mu_0} \partial_x B_z = 0 \\
+\partial _t v_y + v_x \partial_x v_y - \frac{B_x}{\rho \mu_0} \partial_x B_y = 0 \\
+\partial_t v_z + v_x \partial_x v_z - \frac{B_x}{\rho \mu_0} \partial_x B_Z = 0 \\
+\partial_t B_x + v_x \partial_x B_x = 0 \\
+\partial_t B_y + v_x \partial_x B_y + B_y \partial_x v_x - B_x \partial_x v_y = 0 \\
+\partial_t B_z + v_x \partial_x B_z + B_z \partial_x v_x - B_x \partial_x v_z = 0 \\
+\partial_t p + v_x \partial_x p + \gamma p \partial_x v_x = 0
+\end{eqnarray*}
+where in 1D $\partial_y = \partial_z = 0$, and accordingly $\div \vec B \rightarrow \partial_x B_x = 0$. In matrix form, we have:
+
+\begin{equation}
+\partial_t \begin{bmatrix}
+\rho \\ v_x \\ v_y \\ v_z \\ B_x \\ B_y \\ B_z \\ p
+\end{bmatrix} + \begin{bmatrix}
+v_x & \rho & 0 & 0 & 0 & 0 & 0 & 0\\
+0 & v_x & 0 & 0 & 0 & \frac{B_y}{\rho \mu_0} & \frac{B_z}{\rho \mu_0} & \frac{1}{\rho} \\
+0 & 0 & v_x & 0 & 0 & - \frac{B_x}{\rho \mu_0} & 0 & 0 \\
+0 & 0 & 0 & v_x & 0 & 0 & - \frac{B_x}{\rho \mu_0} & 0 \\
+0 & 0 & 0 & 0 & v_x & 0 & 0 & 0 \\
+0 & B_y & - B_x & 0 & 0 & v_x & 0 & 0 \\
+0 & B_z & 0 & - B_x & 0 & 0 & v_x & 0 \\
+0 & \gamma p & 0 & 0 & 0 & 0 & 0 & v_x
+\end{bmatrix} \partial_x \begin{bmatrix} 
+\rho \\ v_x \\ v_y \\ v_z \\ B_x \\ B_y \\ B_z \\ p
+\end{bmatrix} = 0
+\end{equation}
+
+Plugging this matrix into a symbolic solver (Mathematica) and asking for the eigenvalues, we get the following list of eigenvalues:
+
+\begin{eqnarray}
+\lambda_{1, 2} & = & v_x \\
+\lambda_{3, 4} & = & v_x \pm \frac{B_x}{\sqrt{\mu_0 \rho}} \\
+\lambda_{5, 6} & = & v_x \pm \sqrt{\frac{\left(B_x ^2 + B_y ^2 + B_z ^2 + p \gamma \mu_0 + \sqrt{B_x ^4 + 2 B_x ^2 (B_y ^2 + B_z ^2 - p \gamma \mu_0) + (B_y ^2 + B_z ^2 + p \gamma \mu_0)^2} \right)}{2 \rho \mu_0}} \\
+\lambda_{7, 8} & = & v_x \pm \sqrt{\frac{\left(B_x ^2 + B_y ^2 + B_z ^2 + p \gamma \mu_0 - \sqrt{B_x ^4 + 2 B_x ^2 (B_y ^2 + B_z ^2 - p \gamma \mu_0) + (B_y ^2 + B_z ^2 + p \gamma \mu_0)^2} \right)}{2 \rho \mu_0}}
+\end{eqnarray}
+
+where $v_x$ is a repeated eigenvalue. The first four eigenvalues are clearly real. We can simplify the other characteristic speeds by identifying the following speeds we expect to see in ideal MHD, namely the Alfvén speed and the sound speed:
+
+\begin{eqnarray}
+c_s & = & \sqrt{\frac{\gamma p}{\rho}} \qquad \text{(Sound speed of ideal gas)}\\
+a & = & \sqrt{\frac{B_x ^2 + B_y ^2 + B_z ^2}{\rho \mu_0}} =  \frac{B}{\sqrt{\rho \mu_0}} \qquad \text{(Alfvén wave speed)} \\
+a_x & = & \frac{B_x}{\sqrt{\rho \mu_0}} \qquad \text{(Parallel component of the Alfvén speed)}
+\end{eqnarray}
+
+We can identify these speeds within the other eigenvalues:
+
+\begin{eqnarray}
+\lambda_{5, 6} & = & v_x \pm \sqrt{\frac{\left(B_x ^2 + B_y ^2 + B_z ^2 + p \gamma \mu_0 + \sqrt{B_x ^4 + 2 B_x ^2 (B_y ^2 + B_z ^2 - p \gamma \mu_0) + (B_y ^2 + B_z ^2 + p \gamma \mu_0)^2} \right)}{2 \rho \mu_0}} \\
+& = & v_x \pm \sqrt{\frac{1}{2}\left(a^2 + c_s ^2 + \sqrt{(a^2 + c_s ^2)^2 - 4 a_x ^2 c_s ^2}\right)} \\
+\lambda_{7, 8} & = & v_x \pm \sqrt{\frac{\left(B_x ^2 + B_y ^2 + B_z ^2 + p \gamma \mu_0 - \sqrt{B_x ^4 + 2 B_x ^2 (B_y ^2 + B_z ^2 - p \gamma \mu_0) + (B_y ^2 + B_z ^2 + p \gamma \mu_0)^2} \right)}{2 \rho \mu_0}} \\
+& = & v_x \pm \sqrt{\frac{1}{2}\left(a^2 + c_s ^2 - \sqrt{(a^2 + c_s ^2)^2 - 4 a_x ^2 c_s ^2}\right)}
+\end{eqnarray}
+
+It's easy to see that $a \geq a_x$, since $B_y ^2 + B_z ^2 \geq 0$. To see that $\lambda_{5, 6}$ are real:
+\begin{eqnarray}
+(a^2 + c_s ^2) ^2 - 4 a_x ^2 c_s ^2 & = & a^4 + 2a^2 c_s^2 + c_s ^4 - 4 a_x ^2 c_s ^2 \\
+& \geq & a^4 + 2 a^2 c_s^2 + c_s ^4 - 4 a ^2 c_s ^2 \\
+a^4 + 2 a^2 c_s^2 + c_s ^4 - 4 a ^2 c_s ^2 & = & a^4 - 2 a^2 c_s ^2 + c_s ^4 \\
+& = & (a^2 - c_s^2)^2 \\
+& \geq & 0
+\end{eqnarray}
+
+And likewise, $\lambda_{7, 8}$ are also real:
+\begin{eqnarray}
+a^2 + c_s ^2 - \sqrt{(a^2 + c_s ^2)^2 - 4 a_x ^2 c_s ^2} & \geq & a^2 + c_s ^2 - \sqrt{(a^2 + c_s ^2)^2 - 4 a ^2 c_s ^2} \\
+a^2 + c_s ^2 - \sqrt{(a^2 + c_s ^2)^2 - 4 a ^2 c_s ^2} & = & a^2 + c_s ^2 - (a^2 - c_s ^2) \\
+& = & 2 c_s ^2 \\
+& > & 0
+\end{eqnarray}
+
+All of the eigenvalues of the ideal MHD system are real, which means the system of equations is unconditionally hyperbolic.
+
+\end{document}
+
